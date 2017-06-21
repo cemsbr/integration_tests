@@ -98,3 +98,40 @@ class TestRepoRoot(TestCase):
         bash.expect(CONTAINER)
         cls._kytos.wait()
         cls._mininet.wait()
+
+
+class TestArchRootPyPIInstall(TestCase):
+    """As root, install Kytos from PyPI using pip in Archlinux.
+
+    This test reproduces kytos#465.
+    """
+
+    _shell = None
+    _PROMPT = r'\[root@.* /\]# '
+
+    @classmethod
+    def setUpClass(cls):
+        """Start docker with a higher timeout for downloading the image."""
+        cls._shell = pexpect.spawn('docker run --rm -it base/archlinux',
+                                   timeout=90)
+
+    def test_install(self):
+        """Install latest pip and then kytos."""
+        self._install_pip()
+        self._shell.sendline('pip install kytos')
+        i = self._shell.expect(['Successfully installed .*kytos',
+                               self._PROMPT], timeout=90)
+        self.assertEqual(0, i, "Couldn't install kytos:\n" +
+                         self._shell.before.decode('utf-8'))
+
+    @classmethod
+    def _install_pip(cls):
+        cls._shell.expect(cls._PROMPT)
+        cls._shell.sendline('pacman -Sy --noconfirm python-pip')
+        cls._shell.expect(cls._PROMPT, timeout=90)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Quit container and it will be deleted."""
+        if cls._shell:
+            cls._shell.sendline('exit')
