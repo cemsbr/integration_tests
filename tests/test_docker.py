@@ -11,8 +11,8 @@ PROJECTS = 'python-openflow', 'kytos-utils', 'kytos'
 NAPPS = 'kytos/of_core', 'kytos/of_l2ls'
 
 
-class TestRepoRoot(TestCase):
-    """As root, install the latest source code and test ping in mininet.
+class TestUbuntuRootRepoPing(TestCase):
+    """As root, install the latest source code and test ping with mininet.
 
     This is not a regular test case because the tests (methods) are not
     self-contained. This is done to make them faster, easier to read and
@@ -92,12 +92,11 @@ class TestRepoRoot(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        """Stop and remove docker instance."""
+        """Stop container."""
         bash = pexpect.spawn('/bin/bash')
-        bash.sendline(f'docker container stop {CONTAINER}')
-        bash.expect(CONTAINER)
-        cls._kytos.wait()
-        cls._mininet.wait()
+        bash.sendline(f'docker container stop {CONTAINER} && exit')
+        bash.expect(f'\r\n{CONTAINER}\r\n')
+        bash.wait()
 
 
 class TestArchRootPyPIInstall(TestCase):
