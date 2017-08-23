@@ -3,7 +3,7 @@ from unittest import TestCase
 
 import pexpect
 
-IMAGE = 'kytos/integration_tests'
+IMAGE = 'kytos/systests'
 CONTAINER = 'kytos_tests'
 PROMPT = 'root@.*:/usr/local/src/kytos# '
 # Projects in install order
@@ -60,34 +60,21 @@ class TestUbuntuRootRepoPing(TestCase):
         for napp in NAPPS:
             self._mininet.sendline(f'kytos napps install {napp}')
             self._mininet.expect('INFO    Enabled.')
+            napp_name = napp.split('/')[0]
+            self._kytos.expect(napp_name +'.+Running NApp')
             self._mininet.expect(PROMPT)
 
-    def test04_restart_kytos_with_napps(self):
-        """Kytos must be restarted so the new NApps are loaded."""
-        self._kytos.sendline('quit')
-        self._kytos.expect(PROMPT)
-        self._kytos.sendline('kytosd -f')
-
-        # Expecting one and then another is not working. So we match any of the
-        # two lines first and then the other line.
-        outputs = [r'\(of_core\) Running NApp', r'\(of_l2ls\) Running NApp']
-        i = self._kytos.expect(outputs)
-        other_i = i ^ 1
-        self._kytos.expect(outputs[other_i])
-
-        self._kytos.expect(r'kytos \$> ')
-
-    def test05_launch_mininet(self):
+    def test04_launch_mininet(self):
         """Start mininet with OF 1.0 and Kytos as controller."""
         self._mininet.sendline(
             'mn --topo linear,2 --mac --controller=remote,ip=127.0.0.1'
             ' --switch ovsk,protocols=OpenFlow10')
         self._mininet.expect('mininet> ')
 
-    def test06_ping(self):
+    def test05_ping(self):
         """Ping 2 mininet hosts."""
         self._mininet.sendline('h1 ping -c 1 h2')
-        self._mininet.expect('64 bytes from 10.0.0.2: icmp_seq=1 ttl=64'
+        self._mininet.expect('64 bytes from 10.0.0.2: icmp_seq=\d+ ttl=64'
                              r' time=\d+ ms')
 
     @classmethod
@@ -95,7 +82,7 @@ class TestUbuntuRootRepoPing(TestCase):
         """Stop container."""
         bash = pexpect.spawn('/bin/bash')
         bash.sendline(f'docker container stop {CONTAINER} && exit')
-        bash.expect(f'\r\n{CONTAINER}\r\n')
+        bash.expect(f'\r\n{CONTAINER}\r\n', timeout=120)
         bash.wait()
 
 
@@ -127,7 +114,7 @@ class TestArchRootPyPIInstall(TestCase):
     def _install_pip(cls):
         cls._shell.expect(cls._PROMPT)
         cls._shell.sendline('pacman -Sy --noconfirm python-pip')
-        cls._shell.expect(cls._PROMPT, timeout=90)
+        cls._shell.expect(cls._PROMPT, timeout=120)
 
     @classmethod
     def tearDownClass(cls):
